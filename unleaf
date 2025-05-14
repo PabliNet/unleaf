@@ -1,0 +1,118 @@
+#!/bin/sh
+errors() {
+    case $lang in
+        es)
+            case "$1" in
+                1) printf "El script requiere argumentos.\n" ;;
+                2) printf "Argumentos extras inesperados.\n" ;;
+                3) printf "PDF invalido.\n" ;;
+                4) printf "%s: no se puede acceder a '%s': No existe el PDF.\n" "$0" "$2" ;;
+                5) printf "No se puede obtener la cantidad de páginas.\n" ;;
+                6) printf "Salida invalida '%s': no se permite una ruta de archivo.\n" "$2" ;;
+                7) printf "El comando %s no está disponible.\nInstala «poppler-utils»\n" "$2"
+                ;;
+            esac
+        ;;
+        *)
+            case "$1" in
+                1) printf "This script requires arguments.\n";;
+                2) printf "Unexpected extra arguments.\n" ;;
+                3) printf "Invalid PDF file\n" ;;
+                4) printf "%s: cannot access %s: No such file.\n" "$0" "$2" ;;
+                5) printf "Failed to extract page count.\n" ;;
+                6) printf "Invalid output '%s': a file path is not allowed.\n" "$2" ;;
+                7) printf "The %s command is not available.\nInstall «poppler-utils»\n" "$2"
+                ;;
+            esac
+        ;;
+    esac
+    return "$1"
+}
+[ -z "$LANG" ] && LANG="en"
+lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
+script_name=$(basename "$0")
+version=0.0.4
+case "$#" in
+    0) errors 1
+    exit $?
+;;
+    1) case "$1" in
+        -h|--help|--version)
+            option="$1"
+            case "$option" in
+                -h|--help)
+                    case $lang in
+                        es)
+                            printf "Modo de uso: unleaf book.pdf\n"
+                            printf "             unleaf book.pdf paginas.pdf\n"
+                            printf " -h, --help\t\tMuestra esta ayuda y sale\n\n"
+                            printf "     --version\t\tMuestra la información de versión\n"
+                        ;;
+                        *)
+                            printf "Usage: unleaf book.pdf\n"
+                            printf "       unleaf book.pdf pages.pdf\n"
+                            printf " -h, --help\t\tdisplay this help and exit\n\n"
+                            printf "     --version\t\toutput version information and exit\n"
+                        ;; esac
+            ;;
+                --version) printf "${script_name} ${version}\n"
+            ;; esac
+            exit 0
+    ;; esac
+;;
+    *) if [ "$#" -gt 2 ]; then
+        errors 2
+        exit $?
+    fi
+;; esac
+input="$1"
+if [ ! -f "$input" ]; then
+    errors 4 "$input"
+    exit $?
+fi
+for cmd in pdfinfo pdfseparate; do
+    if ! which "$cmd" >/dev/null 2>&1; then
+        errors 7 "$cmd"
+        exit $?
+    fi
+done
+total=$(LC_ALL=C pdfinfo "$input" | awk '/Pages:/ {print $2}')
+if ! printf '%s\n' "$total" | grep -qE '^[0-9]+$'; then
+    errors 5
+    exit $?
+fi
+digit=${#total}
+dir_name=$(dirname "$input")
+if [ "$#" -eq 1 ]; then
+    filename=$(basename "$input" | tr ' ' '_')
+    ext=pdf
+else
+    output="$2"
+    if [ "${output%/*}" != "$output" ]; then
+        errors 6 "$output"
+        exit $?
+    fi
+    filename=$(basename "$output" | tr ' ' '_')
+    ext=$(printf '%s' "${filename##*.}" | tr '[:upper:]' '[:lower:]')
+fi
+if ! head -c 4 "$input" | grep -q '%PDF' || [ "$ext" != "pdf" ]; then
+    errors 3
+    exit $?
+fi
+filename=${filename%.*}
+newdir="${dir_name}/${filename}.d"
+mkdir -p "$newdir"
+pattern=$(printf "%s/%s_%%0%dd.pdf" "$newdir" "$filename" "$digit")
+pdfseparate "$input" "$pattern"
+string_total=$(echo "$total" | awk '{printf "%'\''d\n", $0}' | tr \' .)
+case $lang in
+    es)
+        printf "PDF dividido correctamente en: $newdir\n"
+        printf "%s nuevos archivos.\n" "$string_total"
+    ;;
+    *)
+        printf "PDF split successfully to: $newdir\n"
+        printf "%s new files were created\n" "$string_total"
+    ;;
+esac
+exit 0
