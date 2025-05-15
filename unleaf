@@ -31,7 +31,7 @@ errors() {
 [ -z "$LANG" ] && LANG="en"
 lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
 script_name=$(basename "$0")
-version=0.0.4
+version=0.0.5
 case "$#" in
     0) errors 1
     exit $?
@@ -102,7 +102,7 @@ fi
 filename=${filename%.*}
 newdir="${dir_name}/${filename}.d"
 mkdir -p "$newdir"
-pattern=$(printf "%s/%s_%%0%dd.pdf" "$newdir" "$filename" "$digit")
+pattern=$(printf "%s/%s_%%0${digit}d.pdf" "$newdir" "$filename")
 pdfseparate "$input" "$pattern"
 string_total=$(echo "$total" | awk '{printf "%'\''d\n", $0}' | tr \' .)
 case $lang in
