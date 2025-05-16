@@ -31,7 +31,7 @@ errors() {
 [ -z "$LANG" ] && LANG="en"
 lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
 script_name=$(basename "$0")
-version=\ 0.0.6
+version=\ 0.0.7
 case "$#" in
     0) errors 1
     exit $?
@@ -105,7 +105,7 @@ mkdir -p "$newdir"
 [ $digit -le 9 ] && pattern="${newdir}/${filename}_%d.pdf" || pattern="${newdir}/${filename}_%0${digit}d.pdf"
 pdfseparate "$input" "$pattern"
 string_total=$(echo "$total" | awk '{printf "%'\''d\n", $0}' | tr \' .)
-if [ -z "$newdir" ]; then
+if [ -z "$(ls -A $newdir)" ]; then
     rmdir "$newdir"
 else
     case $lang in
