@@ -31,7 +31,7 @@ errors() {
 [ -z "$LANG" ] && LANG="en"
 lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
 script_name=$(basename "$0")
-version=0.0.5
+version=\ 0.0.5
 case "$#" in
     0) errors 1
     exit $?
@@ -55,7 +55,7 @@ case "$#" in
                             printf "     --version\t\toutput version information and exit\n"
                         ;; esac
             ;;
-                --version) printf "${script_name} ${version}\n"
+                --version) printf "${script_name}${version}\n"
             ;; esac
             exit 0
     ;; esac
@@ -102,17 +102,21 @@ fi
 filename=${filename%.*}
 newdir="${dir_name}/${filename}.d"
 mkdir -p "$newdir"
-pattern=$(printf "%s/%s_%%0${digit}d.pdf" "$newdir" "$filename")
+pattern="${newdir}/${filename}_%0${digit}d.pdf"
 pdfseparate "$input" "$pattern"
 string_total=$(echo "$total" | awk '{printf "%'\''d\n", $0}' | tr \' .)
-case $lang in
-    es)
-        printf "PDF dividido correctamente en: $newdir\n"
-        printf "%s nuevos archivos.\n" "$string_total"
-    ;;
-    *)
-        printf "PDF split successfully to: $newdir\n"
-        printf "%s new files were created\n" "$string_total"
-    ;;
-esac
+if [ -z "$newdir" ]; then
+    rmdir "$newdir"
+else
+    case $lang in
+        es)
+            printf "PDF dividido correctamente en: $newdir\n"
+            printf "%s nuevos archivos.\n" "$string_total"
+        ;;
+        *)
+            printf "PDF split successfully to: $newdir\n"
+            printf "%s new files were created\n" "$string_total"
+        ;;
+    esac
+fi
 exit 0
