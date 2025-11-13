@@ -44,14 +44,14 @@ case "$#" in
                     case $lang in
                         es)
                             printf "Modo de uso: unleaf book.pdf\n"
-                            printf "             unleaf book.pdf paginas.pdf\n"
-                            printf " -h, --help\t\tMuestra esta ayuda y sale\n\n"
+                            printf "             unleaf book.pdf paginas.pdf\n\n"
+                            printf " -h, --help\t\tMuestra esta ayuda y sale\n"
                             printf "     --version\t\tMuestra la información de versión\n"
                         ;;
                         *)
                             printf "Usage: unleaf book.pdf\n"
-                            printf "       unleaf book.pdf pages.pdf\n"
-                            printf " -h, --help\t\tdisplay this help and exit\n\n"
+                            printf "       unleaf book.pdf pages.pdf\n\n"
+                            printf " -h, --help\t\tdisplay this help and exit\n"
                             printf "     --version\t\toutput version information and exit\n"
                         ;; esac
             ;;
