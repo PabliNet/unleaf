@@ -31,7 +31,7 @@ errors() {
 [ -z "$LANG" ] && LANG="en"
 lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
 script_name=$(basename "$0")
-version=\ 0.1
+version=0.1
 case "$#" in
     0) errors 1
     exit $?
