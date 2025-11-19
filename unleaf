@@ -8,9 +8,9 @@ errors() {
                 3) printf "PDF invalido.\n" ;;
                 4) printf "%s: no se puede acceder a '%s': No existe el PDF.\n" "$0" "$2" ;;
                 5) printf "No se puede obtener la cantidad de páginas.\n" ;;
-                6) printf "Salida invalida '%s': no se permite una ruta de archivo.\n" "$2" ;;
-                7) printf "El comando %s no está disponible.\nInstala «poppler-utils»\n" "$2"
-                ;;
+                6) printf "El directorio de destino '%s' no existe.\n" "$2" ;;
+                7) printf "El comando %s no está disponible.\nInstala «poppler-utils»\n" "$2" ;;
+                8) printf "El PDF no contiene más de una página.\n" ;;
             esac
         ;;
         *)
@@ -20,18 +20,18 @@ errors() {
                 3) printf "Invalid PDF file\n" ;;
                 4) printf "%s: cannot access %s: No such file.\n" "$0" "$2" ;;
                 5) printf "Failed to extract page count.\n" ;;
-                6) printf "Invalid output '%s': a file path is not allowed.\n" "$2" ;;
-                7) printf "The %s command is not available.\nInstall «poppler-utils»\n" "$2"
-                ;;
+                6) printf "Destination directory '%s' does not exist.\n" "$2" ;;
+                7) printf "The %s command is not available.\nInstall «poppler-utils»\n" "$2" ;;
+                8) printf "The PDF does not have more than one page.\n" ;;
             esac
         ;;
     esac
     return "$1"
 }
-[ -z "$LANG" ] && LANG="en"
+: "${LANG:=en}"
 lang=$(printf %.2s "$LANG" | tr '[:upper:]' '[:lower:]')
 script_name=$(basename "$0")
-version=0.1
+version=0.2
 case "$#" in
     0) errors 1
     exit $?
@@ -44,34 +44,37 @@ case "$#" in
                     case $lang in
                         es)
                             printf "Modo de uso: unleaf book.pdf\n"
-                            printf "             unleaf book.pdf paginas.pdf\n\n"
+                            printf "             unleaf book.pdf directorio_destino\n\n"
                             printf " -h, --help\t\tMuestra esta ayuda y sale\n"
                             printf "     --version\t\tMuestra la información de versión\n"
                         ;;
                         *)
                             printf "Usage: unleaf book.pdf\n"
-                            printf "       unleaf book.pdf pages.pdf\n\n"
+                            printf "       unleaf book.pdf destination_directory\n\n"
                             printf " -h, --help\t\tdisplay this help and exit\n"
                             printf "     --version\t\toutput version information and exit\n"
-                        ;; esac
-            ;;
-                --version) printf "${script_name}${version}\n"
-            ;; esac
+                        ;;
+                    esac
+                ;;
+                --version) printf "%s %s\n" "$script_name" "$version" ;;
+            esac
             exit 0
-    ;; esac
-;;
+        ;;
+    esac
+    ;;
     *) if [ "$#" -gt 2 ]; then
         errors 2
         exit $?
     fi
-;; esac
+    ;;
+esac
 input="$1"
 if [ ! -f "$input" ]; then
     errors 4 "$input"
     exit $?
 fi
 for cmd in pdfinfo pdfseparate; do
-    if ! which "$cmd" >/dev/null 2>&1; then
+    if ! command -v "$cmd" >/dev/null 2>&1; then
         errors 7 "$cmd"
         exit $?
     fi
@@ -81,31 +84,36 @@ if ! printf '%s\n' "$total" | grep -qE '^[0-9]+$'; then
     errors 5
     exit $?
 fi
+if [ "$total" -le 1 ]; then
+    errors 8
+    exit $?
+fi
 digit=${#total}
 dir_name=$(dirname "$input")
 if [ "$#" -eq 1 ]; then
-    filename=$(basename "$input" | tr ' ' '_')
-    ext=pdf
+    to_dir="$dir_name"
 else
-    output="$2"
-    if [ "${output%/*}" != "$output" ]; then
-        errors 6 "$output"
+    to_dir="$2"
+    if [ ! -d "$to_dir" ]; then
+        errors 6 "$to_dir"
         exit $?
     fi
-    filename=$(basename "$output" | tr ' ' '_')
-    ext=$(printf '%s' "${filename##*.}" | tr '[:upper:]' '[:lower:]')
 fi
-if ! head -c 4 "$input" | grep -q '%PDF' || [ "$ext" != "pdf" ]; then
+filename=$(basename "$input" .pdf | tr ' ' '_')
+if ! head -c 1024 "$input" | tr -d '\000' | grep -q '%PDF'; then
     errors 3
     exit $?
 fi
-filename=${filename%.*}
-newdir="${dir_name}/${filename}.d"
+newdir="${to_dir}/${filename}.d"
 mkdir -p "$newdir"
-pattern="${newdir}/${filename}_%0${digit}d.pdf"
+if [ "$total" -le 9 ]; then
+    pattern="${newdir}/${filename}_%d.pdf"
+else
+    pattern="${newdir}/${filename}_%0${digit}d.pdf"
+fi
 pdfseparate "$input" "$pattern"
 string_total=$(echo "$total" | awk '{printf "%'\''d\n", $0}' | tr \' .)
-if [ -z "$(ls -A $newdir)" ]; then
+if [ -z "$(ls -A "$newdir")" ]; then
     rmdir "$newdir"
 else
     case $lang in
